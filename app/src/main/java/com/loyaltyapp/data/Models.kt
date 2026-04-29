@@ -81,6 +81,12 @@ data class OffersResponse(
 data class UserStoreBody(val userId: Int, val storeId: Int)
 data class UserRestaurantBody(val userId: Int, val restaurantId: Int)
 
+data class UserPointsResponse(
+    val success: Boolean,
+    val accumulated: Int,
+    val visits: Int
+)
+
 data class VisitLogItem(
     val id: Int,
     val userId: Int,

@@ -42,4 +42,11 @@ interface ApiService {
 
     @GET("visit-history/{userId}")
     suspend fun getVisitHistory(@Path("userId") userId: Int): VisitHistoryResponse
+
+    @GET("user-points")
+    suspend fun getUserPoints(
+        @Query("userId") userId: Int,
+        @Query("restaurantId") restaurantId: Int? = null,
+        @Query("storeId") storeId: Int? = null
+    ): UserPointsResponse
 }

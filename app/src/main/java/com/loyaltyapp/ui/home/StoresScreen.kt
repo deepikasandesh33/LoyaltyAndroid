@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingBag
-import androidx.compose.material.icons.filled.WifiOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,9 +22,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.loyaltyapp.data.NetworkModule
 import com.loyaltyapp.data.StoreItem
 import com.loyaltyapp.data.colorFromString
 import com.loyaltyapp.viewmodel.AppViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -169,6 +170,7 @@ fun StoresScreen(viewModel: AppViewModel, onProfileClick: () -> Unit) {
         StoreDetailSheet(
             store = store,
             isUserStore = state.userStoreIds.contains(store.Id),
+            userId = state.userId,
             onRemove = { viewModel.removeStore(store.Id) },
             onDismiss = { selectedStore = null }
         )
@@ -252,10 +254,25 @@ fun StoreIconCard(
 fun StoreDetailSheet(
     store: StoreItem,
     isUserStore: Boolean,
+    userId: Int?,
     onRemove: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val color = colorFromString(store.Color)
+    var accumulated by remember { mutableIntStateOf(0) }
+    var visitCount by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(store.Id) {
+        if (userId != null) {
+            scope.launch {
+                try {
+                    val r = NetworkModule.api.getUserPoints(userId = userId, storeId = store.Id)
+                    if (r.success) { accumulated = r.accumulated; visitCount = r.visits }
+                } catch (_: Exception) {}
+            }
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -279,10 +296,18 @@ fun StoreDetailSheet(
             Text(store.Tier, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium)
 
             Spacer(Modifier.height(20.dp))
+
+            // Accumulated points — big number
+            Text("Your Points Here", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            Text("$accumulated", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = color)
+            Text("$visitCount visit${if (visitCount == 1) "" else "s"} · ${store.Points} pts/visit",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+
+            Spacer(Modifier.height(20.dp))
             HStack {
-                InfoPill(label = "Points", value = "${store.Points}")
-                Spacer(Modifier.width(12.dp))
                 InfoPill(label = "Tier", value = store.Tier)
+                Spacer(Modifier.width(12.dp))
+                InfoPill(label = "Pts/Visit", value = "${store.Points}")
             }
 
             if (isUserStore) {

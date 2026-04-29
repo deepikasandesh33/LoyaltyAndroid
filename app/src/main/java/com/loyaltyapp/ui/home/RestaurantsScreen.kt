@@ -22,9 +22,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.loyaltyapp.data.NetworkModule
 import com.loyaltyapp.data.RestaurantItem
 import com.loyaltyapp.data.colorFromString
 import com.loyaltyapp.viewmodel.AppViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -167,6 +169,7 @@ fun RestaurantsScreen(viewModel: AppViewModel, onProfileClick: () -> Unit) {
         RestaurantDetailSheet(
             restaurant = r,
             isUserRestaurant = state.userRestaurantIds.contains(r.Id),
+            userId = state.userId,
             onRemove = { viewModel.removeRestaurant(r.Id) },
             onDismiss = { selectedRestaurant = null }
         )
@@ -251,10 +254,25 @@ fun RestaurantIconCard(
 fun RestaurantDetailSheet(
     restaurant: RestaurantItem,
     isUserRestaurant: Boolean,
+    userId: Int?,
     onRemove: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val color = colorFromString(restaurant.Color)
+    var accumulated by remember { mutableIntStateOf(0) }
+    var visitCount by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(restaurant.Id) {
+        if (userId != null) {
+            scope.launch {
+                try {
+                    val r = NetworkModule.api.getUserPoints(userId = userId, restaurantId = restaurant.Id)
+                    if (r.success) { accumulated = r.accumulated; visitCount = r.visits }
+                } catch (_: Exception) {}
+            }
+        }
+    }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
@@ -278,10 +296,18 @@ fun RestaurantDetailSheet(
             Text(restaurant.Cuisine, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium)
 
             Spacer(Modifier.height(20.dp))
+
+            // Accumulated points — big number
+            Text("Your Points Here", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            Text("$accumulated", fontSize = 48.sp, fontWeight = FontWeight.Bold, color = color)
+            Text("$visitCount visit${if (visitCount == 1) "" else "s"} · ${restaurant.Points} pts/visit",
+                fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+
+            Spacer(Modifier.height(20.dp))
             Row {
-                InfoPill(label = "Points", value = "${restaurant.Points}")
-                Spacer(Modifier.width(12.dp))
                 InfoPill(label = "Tier", value = restaurant.Tier)
+                Spacer(Modifier.width(12.dp))
+                InfoPill(label = "Pts/Visit", value = "${restaurant.Points}")
             }
 
             if (isUserRestaurant) {
