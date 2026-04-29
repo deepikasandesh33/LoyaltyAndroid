@@ -102,6 +102,22 @@ data class VisitHistoryResponse(
     val visits: List<VisitLogItem>
 )
 
+data class RedeemPointsRequest(
+    val userId: Int,
+    val restaurantId: Int? = null,
+    val storeId: Int? = null,
+    val pointsToRedeem: Int
+)
+
+data class RedeemPointsResponse(
+    val success: Boolean,
+    val message: String,
+    val pointsRedeemed: Int? = null,
+    val discountDollars: Double? = null,
+    val newBalance: Int? = null,
+    val qrPayload: String? = null
+)
+
 fun colorFromString(name: String): Color = when (name.lowercase()) {
     "green"  -> Color(0xFF34C759)
     "orange" -> Color(0xFFFF9500)

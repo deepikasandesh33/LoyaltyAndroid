@@ -49,4 +49,7 @@ interface ApiService {
         @Query("restaurantId") restaurantId: Int? = null,
         @Query("storeId") storeId: Int? = null
     ): UserPointsResponse
+
+    @POST("redeem-points")
+    suspend fun redeemPoints(@Body body: RedeemPointsRequest): RedeemPointsResponse
 }

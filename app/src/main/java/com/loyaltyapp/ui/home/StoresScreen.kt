@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.loyaltyapp.data.NetworkModule
+import com.loyaltyapp.data.RedeemPointsRequest
 import com.loyaltyapp.data.StoreItem
 import com.loyaltyapp.data.colorFromString
 import com.loyaltyapp.viewmodel.AppViewModel
@@ -261,6 +262,7 @@ fun StoreDetailSheet(
     val color = colorFromString(store.Color)
     var accumulated by remember { mutableIntStateOf(0) }
     var visitCount by remember { mutableIntStateOf(0) }
+    var showRedeemDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(store.Id) {
@@ -272,6 +274,30 @@ fun StoreDetailSheet(
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    if (showRedeemDialog) {
+        RedeemPointsDialog(
+            placeName = store.Name,
+            color = color,
+            currentBalance = accumulated,
+            onDismiss = { showRedeemDialog = false },
+            onRedeem = { pts ->
+                if (userId != null) {
+                    scope.launch {
+                        try {
+                            val r = NetworkModule.api.redeemPoints(
+                                RedeemPointsRequest(userId = userId, storeId = store.Id, pointsToRedeem = pts)
+                            )
+                            if (r.success) {
+                                accumulated = r.newBalance ?: (accumulated - pts)
+                                showRedeemDialog = false
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
+        )
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -310,8 +336,20 @@ fun StoreDetailSheet(
                 InfoPill(label = "Pts/Visit", value = "${store.Points}")
             }
 
+            if (isUserStore && accumulated >= 100) {
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { showRedeemDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = color)
+                ) {
+                    Text("🎁 Redeem Points for Discount")
+                }
+            }
+
             if (isUserStore) {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(12.dp))
                 OutlinedButton(
                     onClick = { onRemove(); onDismiss() },
                     modifier = Modifier.fillMaxWidth(),
@@ -324,6 +362,69 @@ fun StoreDetailSheet(
             }
         }
     }
+}
+
+@Composable
+fun RedeemPointsDialog(
+    placeName: String,
+    color: Color,
+    currentBalance: Int,
+    onDismiss: () -> Unit,
+    onRedeem: (Int) -> Unit
+) {
+    val step = 100
+    val maxPoints = (currentBalance / step) * step
+    var pointsToRedeem by remember { mutableIntStateOf(minOf(step, maxPoints)) }
+    val discountDollars = pointsToRedeem / 100.0
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Redeem Points") },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Balance: $currentBalance pts at $placeName",
+                    fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                Spacer(Modifier.height(16.dp))
+                Text("Points to redeem", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                Spacer(Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = { if (pointsToRedeem > step) pointsToRedeem -= step },
+                        enabled = pointsToRedeem > step
+                    ) {
+                        Text("−", fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                            color = if (pointsToRedeem > step) color else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
+                    }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(80.dp)) {
+                        Text("$pointsToRedeem", fontSize = 32.sp, fontWeight = FontWeight.Bold, color = color)
+                        Text("pts", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                    }
+                    IconButton(
+                        onClick = { if (pointsToRedeem + step <= maxPoints) pointsToRedeem += step },
+                        enabled = pointsToRedeem + step <= maxPoints
+                    ) {
+                        Text("+", fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                            color = if (pointsToRedeem + step <= maxPoints) color else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f))
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("= \$${String.format("%.2f", discountDollars)} discount",
+                    fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = color)
+                Text("(100 pts = \$1.00)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onRedeem(pointsToRedeem) },
+                colors = ButtonDefaults.buttonColors(containerColor = color)
+            ) {
+                Text("Redeem")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        }
+    )
 }
 
 @Composable

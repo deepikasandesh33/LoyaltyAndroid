@@ -23,6 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.loyaltyapp.data.NetworkModule
+import com.loyaltyapp.data.RedeemPointsRequest
 import com.loyaltyapp.data.RestaurantItem
 import com.loyaltyapp.data.colorFromString
 import com.loyaltyapp.viewmodel.AppViewModel
@@ -261,6 +262,7 @@ fun RestaurantDetailSheet(
     val color = colorFromString(restaurant.Color)
     var accumulated by remember { mutableIntStateOf(0) }
     var visitCount by remember { mutableIntStateOf(0) }
+    var showRedeemDialog by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(restaurant.Id) {
@@ -272,6 +274,30 @@ fun RestaurantDetailSheet(
                 } catch (_: Exception) {}
             }
         }
+    }
+
+    if (showRedeemDialog) {
+        RedeemPointsDialog(
+            placeName = restaurant.Name,
+            color = color,
+            currentBalance = accumulated,
+            onDismiss = { showRedeemDialog = false },
+            onRedeem = { pts ->
+                if (userId != null) {
+                    scope.launch {
+                        try {
+                            val r = NetworkModule.api.redeemPoints(
+                                RedeemPointsRequest(userId = userId, restaurantId = restaurant.Id, pointsToRedeem = pts)
+                            )
+                            if (r.success) {
+                                accumulated = r.newBalance ?: (accumulated - pts)
+                                showRedeemDialog = false
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
+        )
     }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -310,8 +336,20 @@ fun RestaurantDetailSheet(
                 InfoPill(label = "Pts/Visit", value = "${restaurant.Points}")
             }
 
+            if (isUserRestaurant && accumulated >= 100) {
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = { showRedeemDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = color)
+                ) {
+                    Text("🎁 Redeem Points for Discount")
+                }
+            }
+
             if (isUserRestaurant) {
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(12.dp))
                 OutlinedButton(
                     onClick = { onRemove(); onDismiss() },
                     modifier = Modifier.fillMaxWidth(),
