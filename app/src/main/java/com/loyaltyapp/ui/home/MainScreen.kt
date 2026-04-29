@@ -8,12 +8,14 @@ import androidx.compose.material.icons.filled.ShoppingBag
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import com.loyaltyapp.ui.profile.ProfileScreen
+import com.loyaltyapp.ui.profile.VisitHistoryScreen
 import com.loyaltyapp.viewmodel.AppViewModel
 
 @Composable
 fun MainScreen(viewModel: AppViewModel) {
     var selectedTab by remember { mutableIntStateOf(0) }
     var showProfile by remember { mutableStateOf(false) }
+    var showVisitHistory by remember { mutableStateOf(false) }
 
     val onProfileClick: () -> Unit = { showProfile = true }
 
@@ -55,7 +57,16 @@ fun MainScreen(viewModel: AppViewModel) {
         }
     }
 
+    if (showVisitHistory) {
+        VisitHistoryScreen(viewModel = viewModel, onBack = { showVisitHistory = false })
+        return
+    }
+
     if (showProfile) {
-        ProfileScreen(viewModel = viewModel, onDismiss = { showProfile = false })
+        ProfileScreen(
+            viewModel = viewModel,
+            onDismiss = { showProfile = false },
+            onViewHistory = { showVisitHistory = true }
+        )
     }
 }

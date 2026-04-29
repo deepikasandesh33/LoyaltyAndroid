@@ -81,6 +81,21 @@ data class OffersResponse(
 data class UserStoreBody(val userId: Int, val storeId: Int)
 data class UserRestaurantBody(val userId: Int, val restaurantId: Int)
 
+data class VisitLogItem(
+    val id: Int,
+    val userId: Int,
+    val restaurantId: Int?,
+    val storeId: Int?,
+    val pointsAwarded: Int,
+    val scannedAt: String
+)
+
+data class VisitHistoryResponse(
+    val success: Boolean,
+    val totalPoints: Int,
+    val visits: List<VisitLogItem>
+)
+
 fun colorFromString(name: String): Color = when (name.lowercase()) {
     "green"  -> Color(0xFF34C759)
     "orange" -> Color(0xFFFF9500)

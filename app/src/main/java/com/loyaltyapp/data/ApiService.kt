@@ -39,4 +39,7 @@ interface ApiService {
 
     @GET("restaurant-offers")
     suspend fun getUserRestaurantOffers(@Query("userId") userId: Int): OffersResponse
+
+    @GET("visit-history/{userId}")
+    suspend fun getVisitHistory(@Path("userId") userId: Int): VisitHistoryResponse
 }

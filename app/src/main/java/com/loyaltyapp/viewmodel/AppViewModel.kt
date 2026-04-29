@@ -3,6 +3,7 @@ package com.loyaltyapp.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.loyaltyapp.data.*
+import com.loyaltyapp.data.VisitLogItem
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,8 @@ data class AppState(
     val userRestaurantIds: Set<Int> = emptySet(),
     val storeOffers: List<OfferItem> = emptyList(),
     val restaurantOffers: List<OfferItem> = emptyList(),
+    val totalPoints: Int = 0,
+    val visitHistory: List<VisitLogItem> = emptyList(),
     val isLoading: Boolean = false,
     val error: String? = null
 )
@@ -127,6 +130,7 @@ class AppViewModel : ViewModel() {
         loadStores(userId)
         loadRestaurants(userId)
         loadOffers(userId)
+        loadVisitHistory(userId)
     }
 
     fun loadStores(userId: Int) {
@@ -155,6 +159,20 @@ class AppViewModel : ViewModel() {
                 val store = api.getUserOffers(userId).offers
                 val restaurant = api.getUserRestaurantOffers(userId).offers
                 _state.value = _state.value.copy(storeOffers = store, restaurantOffers = restaurant)
+            } catch (_: Exception) {}
+        }
+    }
+
+    fun loadVisitHistory(userId: Int) {
+        viewModelScope.launch {
+            try {
+                val response = api.getVisitHistory(userId)
+                if (response.success) {
+                    _state.value = _state.value.copy(
+                        totalPoints = response.totalPoints,
+                        visitHistory = response.visits
+                    )
+                }
             } catch (_: Exception) {}
         }
     }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Cake
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
@@ -24,7 +25,7 @@ import com.loyaltyapp.viewmodel.AppViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileScreen(viewModel: AppViewModel, onDismiss: () -> Unit) {
+fun ProfileScreen(viewModel: AppViewModel, onDismiss: () -> Unit, onViewHistory: () -> Unit = {}) {
     val state by viewModel.state.collectAsState()
     var showLogoutConfirm by remember { mutableStateOf(false) }
 
@@ -106,7 +107,37 @@ fun ProfileScreen(viewModel: AppViewModel, onDismiss: () -> Unit) {
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(16.dp))
+
+            // Total points row
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF5856D6).copy(alpha = 0.08f))
+            ) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Default.History, null,
+                        tint = Color(0xFF5856D6),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Total Points Earned", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                        Text("${state.totalPoints} pts", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF5856D6))
+                    }
+                    TextButton(onClick = { onDismiss(); onViewHistory() }) {
+                        Text("View History", fontSize = 12.sp)
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
 
             Button(
                 onClick = { showLogoutConfirm = true },
